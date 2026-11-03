@@ -3,6 +3,7 @@ import cadquery as cq
 from OCP.gp import gp_GTrsf, gp_Mat, gp_XYZ
 from OCP.BRepBuilderAPI import BRepBuilderAPI_GTransform
 from .shapes import Shape2d
+from .utils import _tri_mesh_to_wp  # 导入缝合器
 
 # ---- 3D primitives ----
 def cuboid(a=1, b=1, c=1): return cq.Workplane("XY").box(a, b, c)
@@ -33,10 +34,11 @@ def pyramid(radius=1, n=3, height=1, division=0.1):
             .loft(ruled=True))
 
 def convex_hull(vertices):
+    """替代原 Hull(vertices=...) 的入口"""
     import trimesh
     mesh = trimesh.convex.convex_hull(np.asarray(vertices, dtype=float))
-    return cq.Workplane("XY").add(
-        cq.Solid.makePolyhedron(mesh.vertices.tolist(), mesh.faces.tolist()))
+    # 修复：不使用 makePolyhedron，直接走缝合器
+    return _tri_mesh_to_wp(mesh.vertices, mesh.faces)
 
 def tetrahedron(a=1):
     return convex_hull([[0,0,0],[a,0,0],
