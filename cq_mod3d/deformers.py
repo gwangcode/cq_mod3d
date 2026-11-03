@@ -16,35 +16,44 @@ def brep_twist_z(part, az, sections=30):
         
     xc = (bb.xmin + bb.xmax) / 2.0
     yc = (bb.ymin + bb.ymax) / 2.0
-    center = cq.Vector(xc, yc, 0)
     
     profiles = []
-    
-    # 修复：必须包成 Workplane 才能使用 section
-    wp = cq.Workplane("XY").add(part.val().clean())
+    solid = part.val().clean()
+    wp_solid = cq.Workplane("XY").add(solid)
     
     for i in range(sections + 1):
         t = i / sections
         z_level = z_min + t * height
-        
-        # Workplane 的 section 返回一个新的 Workplane
-        section_wp = wp.section(cq.Plane(origin=(0, 0, z_level), xDir=(1, 0, 0), normal=(0, 0, 1)))
-        if section_wp is None: 
-            continue
-            
-        faces = section_wp.faces().vals()
-        if not faces: 
-            continue
-            
-        main_face = max(faces, key=lambda f: f.Area())
         angle_deg = math.degrees(t * az * height)
-        rotated_face = main_face.rotate(center, center + cq.Vector(0, 0, 1), angle_deg)
-        profiles.append(cq.Workplane("XY").add(rotated_face))
         
+        # 构造一个无限大的切面
+        cut_plane = cq.Face.makePlane(10000, 10000, basePnt=(0, 0, z_level), dir=(0, 0, 1))
+        
+        try:
+            # 把实体从切面处切开，保留下半部分
+            bottom = wp_solid.split(cut_plane, keepTop=False)
+            if bottom is None or bottom.val() is None:
+                continue
+                
+            # 提取下半部分最高处的面（也就是正好在 z_level 处的截面）
+            faces = bottom.faces(">Z").vals()
+            if not faces:
+                continue
+            
+            main_face = max(faces, key=lambda f: f.Area())
+            
+            # 旋转截面
+            center = cq.Vector(xc, yc, z_level)
+            rotated_face = main_face.rotate(center, center + cq.Vector(0, 0, 1), angle_deg)
+            profiles.append(cq.Workplane("XY").add(rotated_face))
+        except Exception:
+            continue
+            
     if len(profiles) < 2:
         return None
         
     try:
+        # 把所有旋转后的截面放样成实体
         result = profiles[0].loft(ruled=True)
         return result
     except Exception:
