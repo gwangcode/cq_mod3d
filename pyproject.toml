@@ -19,5 +19,9 @@ dependencies = [
     "shapely"
 ]
 
+authors = [
+    { name = "Gang Wang", email = "gwangforward@gmail.com" },
+]
+# ...
 [project.urls]
-"Homepage" = "https://github.com/yourusername/cq_mod3d"
+"Homepage" = "https://github.com/gwangcode/cq_mod3d"
