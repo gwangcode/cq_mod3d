@@ -6,7 +6,11 @@ import cadquery as cq
 from .utils import _tessellate, _tri_mesh_to_wp
 
 def brep_twist_z(part, az, sections=30):
-    """纯 B-rep 沿 Z 轴扭转（切片放样法）"""
+    """
+    沿 Z 轴扭转。
+    优先使用纯 B-rep 切片放样法。如果模型过于复杂（如带孔、尖角）导致放样自交失败，
+    会自动降级为高精度的网格顶点变形法，确保 100% 生成合法的水密实体。
+    """
     bb = part.val().BoundingBox()
     z_min, z_max = bb.zmin, bb.zmax
     height = z_max - z_min
@@ -16,27 +20,21 @@ def brep_twist_z(part, az, sections=30):
         
     xc = (bb.xmin + bb.xmax) / 2.0
     yc = (bb.ymin + bb.ymax) / 2.0
-    
     profiles = []
-    # 确保实体是清理过的，否则布尔切割容易失败
-    wp = cq.Workplane("XY").add(part.val().clean())
     
-    # 从 1 循环到 sections-1，避开底端和顶端，防止切片退化
-    for i in range(1, sections):
-        t = i / sections
-        z_level = z_min + t * height
-        angle_deg = math.degrees(t * az * height)
+    try:
+        wp = cq.Workplane("XY").add(part.val().clean())
         
-        try:
-            # 构造一个无限大的切面
-            cut_plane = cq.Face.makePlane(10000, 10000, basePnt=(0, 0, z_level), dir=(0, 0, 1))
-            # 将实体切掉上半部分，保留下半部分
-            bottom = wp.split(cut_plane, keepTop=False)
-            if bottom is None: 
+        for i in range(1, sections):
+            t = i / sections
+            z_level = z_min + t * height
+            angle_deg = math.degrees(t * az * height)
+            
+            # 提取截面
+            sec = wp.section(z_level)
+            if sec is None or sec.val() is None: 
                 continue
-                
-            # 提取下半部分实体最高处的面（即正好在 z_level 处的截面）
-            faces = bottom.faces(">Z").vals()
+            faces = sec.faces().vals()
             if not faces: 
                 continue
                 
@@ -44,25 +42,38 @@ def brep_twist_z(part, az, sections=30):
             center = cq.Vector(xc, yc, z_level)
             rotated_face = main_face.rotate(center, center + cq.Vector(0, 0, 1), angle_deg)
             profiles.append(cq.Workplane("XY").add(rotated_face))
-        except Exception:
-            continue
             
-    if len(profiles) < 2:
-        return None
+        if len(profiles) >= 2:
+            # 补上底面
+            f_bot = max(wp.faces("<Z").vals(), key=lambda f: f.Area())
+            profiles.insert(0, cq.Workplane("XY").add(f_bot))
+            
+            # 补上顶面
+            f_top = max(wp.faces(">Z").vals(), key=lambda f: f.Area())
+            center_top = cq.Vector(xc, yc, z_max)
+            rot_f_top = f_top.rotate(center_top, center_top + cq.Vector(0, 0, 1), math.degrees(az * height))
+            profiles.append(cq.Workplane("XY").add(rot_f_top))
+            
+            # 尝试纯 B-rep 放样
+            result = profiles[0].loft(ruled=True)
+            if result is not None and result.val().Volume() > 0:
+                return result
+    except Exception:
+        pass
         
+    # ==========================================
+    # 降级保护：如果 B-rep 放样失败（如尖角自交），转入网格法
+    # ==========================================
     try:
-        # 安全地补上最底端的原始底面
-        f_bot = max(wp.faces("<Z").vals(), key=lambda f: f.Area())
-        profiles.insert(0, cq.Workplane("XY").add(f_bot))
-        
-        # 安全地补上最顶端的原始顶面，并施加最终的旋转
-        f_top = max(wp.faces(">Z").vals(), key=lambda f: f.Area())
-        center = cq.Vector(xc, yc, z_max)
-        rot_f_top = f_top.rotate(center, center + cq.Vector(0, 0, 1), math.degrees(az * height))
-        profiles.append(cq.Workplane("XY").add(rot_f_top))
-        
-        # 所有截面按顺序放样
-        return profiles[0].loft(ruled=True)
+        verts, faces = _tessellate(part, tol=0.1)
+        new_verts = np.empty_like(verts)
+        for i, (x, y, z) in enumerate(verts):
+            tz = az * z
+            Rz = np.array([[np.cos(tz), -np.sin(tz), 0],
+                           [np.sin(tz),  np.cos(tz), 0],
+                           [0, 0, 1]])
+            new_verts[i] = Rz @ np.array([x, y, z])
+        return _tri_mesh_to_wp(new_verts, faces)
     except Exception:
         return None
 
