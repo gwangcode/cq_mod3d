@@ -26,6 +26,9 @@ jobs:
         sudo apt-get update
         # 注意这里：libgl1-mesa-glx 已经改成了 libgl1
         sudo apt-get install -y libgl1 libglu1-mesa libxrender1 libglib2.0-0
+        python -m pip install --upgrade pip
+        pip install pytest matplotlib
+        pip install -e .
         
     - name: Install dependencies
       run: |
