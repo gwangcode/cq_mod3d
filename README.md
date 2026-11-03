@@ -149,7 +149,7 @@ In addition to the natively supported cuboid, sphere, cylinder, cone, and torus,
 Includes a rich set of mathematical curve generators, easily usable for extrude or sweep operations:
 *polygon, circle, ellipse, parabola, hyperbola, spiral, cardioid, cycloid, astroid, catenary, epicycloid, hypocycloid, lemniscate, semicircle, sine, tangent*.
 
-All 2D objects support similar +, -, *, @ operations for booleans and transforms, and can be converted to a sketch anytime via `.to_workplane()`.
+All 2D objects support similar `+`, `-`, `*`, `@` operations for booleans and transforms, and can be converted to a sketch anytime via `.to_workplane()`.
 
 # 🛠️ Dependencies
 * [CadQuery](#) (>=2.3.0)
