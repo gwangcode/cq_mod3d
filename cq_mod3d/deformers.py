@@ -5,12 +5,8 @@ from scipy.ndimage import gaussian_filter, map_coordinates
 import cadquery as cq
 from .utils import _tessellate, _tri_mesh_to_wp
 
-def brep_twist_z(part, az, sections=30):
-    """
-    沿 Z 轴扭转。
-    优先使用纯 B-rep 切片放样法。如果模型过于复杂（如带孔、尖角）导致放样自交失败，
-    会自动降级为高精度的网格顶点变形法，确保 100% 生成合法的水密实体。
-    """
+def brep_twist_z(part: cq.Workplane, az: float, sections: int = 30) -> cq.Workplane:
+    """纯 B-rep 沿 Z 轴扭转（切片放样法）"""
     bb = part.val().BoundingBox()
     z_min, z_max = bb.zmin, bb.zmax
     height = z_max - z_min
@@ -30,7 +26,6 @@ def brep_twist_z(part, az, sections=30):
             z_level = z_min + t * height
             angle_deg = math.degrees(t * az * height)
             
-            # 提取截面
             sec = wp.section(z_level)
             if sec is None or sec.val() is None: 
                 continue
@@ -44,26 +39,21 @@ def brep_twist_z(part, az, sections=30):
             profiles.append(cq.Workplane("XY").add(rotated_face))
             
         if len(profiles) >= 2:
-            # 补上底面
             f_bot = max(wp.faces("<Z").vals(), key=lambda f: f.Area())
             profiles.insert(0, cq.Workplane("XY").add(f_bot))
             
-            # 补上顶面
             f_top = max(wp.faces(">Z").vals(), key=lambda f: f.Area())
             center_top = cq.Vector(xc, yc, z_max)
             rot_f_top = f_top.rotate(center_top, center_top + cq.Vector(0, 0, 1), math.degrees(az * height))
             profiles.append(cq.Workplane("XY").add(rot_f_top))
             
-            # 尝试纯 B-rep 放样
             result = profiles[0].loft(ruled=True)
             if result is not None and result.val().Volume() > 0:
                 return result
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [cq_mod3d] B-rep 放样失败，触发网格降级: {e}")
         
-    # ==========================================
-    # 降级保护：如果 B-rep 放样失败（如尖角自交），转入网格法
-    # ==========================================
+    # 降级保护：如果 B-rep 放样失败，转入网格法
     try:
         verts, faces = _tessellate(part, tol=0.1)
         new_verts = np.empty_like(verts)
@@ -74,11 +64,21 @@ def brep_twist_z(part, az, sections=30):
                            [0, 0, 1]])
             new_verts[i] = Rz @ np.array([x, y, z])
         return _tri_mesh_to_wp(new_verts, faces)
-    except Exception:
+    except Exception as e:
+        print(f"❌ [cq_mod3d] 网格扭转彻底失败: {e}")
         return None
 
 
-def apply_noise(part, density=0.2, smoothness=2.0, amplitude=0.1):
+def apply_noise(part: cq.Workplane, density: float = 0.2, smoothness: float = 2.0, amplitude: float = 0.1) -> cq.Workplane:
+    """
+    为规则的 B-rep 模型生成自然的不规则纹理（凸凹）。
+    
+    ⚠️ 警告 (Warning)：
+    此函数通过 B-rep -> Mesh -> 变形 -> B-rep 的流程工作。
+    处理后的实体将失去原有的纯数学解析曲面（如完美的圆柱、圆锥面），
+    转变为由微小三角平面拼接的多面体。这对于渲染和 3D 打印毫无影响，
+    但可能对后续需要极低公差的高精度布尔运算或倒角操作（Fillet）带来困难。
+    """
     if not isinstance(part, cq.Workplane):
         raise TypeError("输入必须是 cq.Workplane 对象")
 
@@ -112,7 +112,8 @@ def apply_noise(part, density=0.2, smoothness=2.0, amplitude=0.1):
     return result_wp
 
 
-def apply_noise_wire(part, density=0.2, smoothness=2.0, amplitude=0.1):
+def apply_noise_wire(part: cq.Workplane, density: float = 0.2, smoothness: float = 2.0, amplitude: float = 0.1) -> cq.Workplane:
+    """为线框或曲线（如树枝骨架、路径）生成不规则的抖动。"""
     verts, _ = _tessellate(part)
     if len(verts) == 0:
         return part
