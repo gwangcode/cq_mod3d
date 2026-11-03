@@ -73,11 +73,18 @@ def _tri_mesh_to_wp(verts, faces, tol=0.05):
     sewing.Perform()
     shell = sewing.SewedShape()
 
+    def _ensure_positive_volume(shape):
+        """确保实体的体积为正，如果法线朝内则翻转"""
+        cq_shape = cq.Shape.cast(shape)
+        if cq_shape.Volume() < 0:
+            return cq_shape.reverse()
+        return cq_shape
+
     # --- 第一次尝试：直接缝合为 Solid ---
     try:
         solid = BRepBuilderAPI_MakeSolid(TopoDS.Shell_s(shell)).Solid()
         if BRepCheck_Analyzer(solid).IsValid():
-            return cq.Workplane("XY").add(cq.Shape.cast(solid))
+            return cq.Workplane("XY").add(_ensure_positive_volume(solid))
     except Exception:
         pass
 
@@ -93,15 +100,16 @@ def _tri_mesh_to_wp(verts, faces, tol=0.05):
         fixed_solid = fixer_solid.Solid()
         
         if BRepCheck_Analyzer(fixed_solid).IsValid():
-            return cq.Workplane("XY").add(cq.Shape.cast(fixed_solid))
+            return cq.Workplane("XY").add(_ensure_positive_volume(fixed_solid))
     except Exception:
         pass
 
-    # --- 兜底：如果强行修复也失败，退回原始形状（避免报错中断程序） ---
+    # --- 兜底：如果强行修复也失败，退回原始形状 ---
     print("⚠️ 警告：网格自交过于严重，无法修复为 Watertight Solid，已降级返回 Shell。")
     return cq.Workplane("XY").add(cq.Shape.cast(shell))
 
 def extremes(part):
+    """返回 cq.Workplane 的包围盒 (minx, maxx, miny, maxy, minz, maxz)"""
     if not isinstance(part, cq.Workplane):
         raise TypeError(f"extremes expects cq.Workplane, got {type(part)}")
     bb = part.val().BoundingBox()
