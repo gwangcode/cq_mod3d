@@ -1,4 +1,4 @@
-import cadquery as cq
+import cadquery as cq, numpy as np
 
 def showx(part):
     if not isinstance(part, cq.Workplane):
