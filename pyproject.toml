@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-    { name = "Gang Wang", url = "https://github.com/gwangcode" }
+    { name = "Gang Wang" }
 ]
 keywords = ["cadquery", "3d", "cad", "procedural", "noise", "mesh"]
 dependencies = [
