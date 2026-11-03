@@ -20,9 +20,9 @@ from OCP.TopoDS import TopoDS
 
 
 def _is_vec(x, n):
-    return (isinstance(x, (list, tuple, np.ndarray))
-            and len(x) == n
-            and all(isinstance(v, (int, float, np.integer, np.floating)) for v in x))
+    """高性能向量检查"""
+    arr = np.asarray(x)
+    return arr.ndim == 1 and arr.size == n and np.issubdtype(arr.dtype, np.number)
 
 def _vec(x):
     return tuple(float(v) for v in x)
