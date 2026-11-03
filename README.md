@@ -36,7 +36,6 @@ pip install -e .
 In your CQ-Editor or any Python script, just import cq_mod3d once, and all operator patches will be automatically activated.
 
 ```python
-import cadquery as cq
 import cq_mod3d as m3
 ```
 
