@@ -18,31 +18,29 @@ def brep_twist_z(part, az, sections=30):
     yc = (bb.ymin + bb.ymax) / 2.0
     
     profiles = []
-    solid = part.val().clean()
-    wp_solid = cq.Workplane("XY").add(solid)
+    # 确保实体是清理过的，否则布尔切割容易失败
+    wp = cq.Workplane("XY").add(part.val().clean())
     
-    for i in range(sections + 1):
+    # 从 1 循环到 sections-1，避开底端和顶端，防止切片退化
+    for i in range(1, sections):
         t = i / sections
         z_level = z_min + t * height
         angle_deg = math.degrees(t * az * height)
         
-        # 构造一个无限大的切面
-        cut_plane = cq.Face.makePlane(10000, 10000, basePnt=(0, 0, z_level), dir=(0, 0, 1))
-        
         try:
-            # 把实体从切面处切开，保留下半部分
-            bottom = wp_solid.split(cut_plane, keepTop=False)
-            if bottom is None or bottom.val() is None:
+            # 构造一个无限大的切面
+            cut_plane = cq.Face.makePlane(10000, 10000, basePnt=(0, 0, z_level), dir=(0, 0, 1))
+            # 将实体切掉上半部分，保留下半部分
+            bottom = wp.split(cut_plane, keepTop=False)
+            if bottom is None: 
                 continue
                 
-            # 提取下半部分最高处的面（也就是正好在 z_level 处的截面）
+            # 提取下半部分实体最高处的面（即正好在 z_level 处的截面）
             faces = bottom.faces(">Z").vals()
-            if not faces:
+            if not faces: 
                 continue
-            
+                
             main_face = max(faces, key=lambda f: f.Area())
-            
-            # 旋转截面
             center = cq.Vector(xc, yc, z_level)
             rotated_face = main_face.rotate(center, center + cq.Vector(0, 0, 1), angle_deg)
             profiles.append(cq.Workplane("XY").add(rotated_face))
@@ -53,9 +51,18 @@ def brep_twist_z(part, az, sections=30):
         return None
         
     try:
-        # 把所有旋转后的截面放样成实体
-        result = profiles[0].loft(ruled=True)
-        return result
+        # 安全地补上最底端的原始底面
+        f_bot = max(wp.faces("<Z").vals(), key=lambda f: f.Area())
+        profiles.insert(0, cq.Workplane("XY").add(f_bot))
+        
+        # 安全地补上最顶端的原始顶面，并施加最终的旋转
+        f_top = max(wp.faces(">Z").vals(), key=lambda f: f.Area())
+        center = cq.Vector(xc, yc, z_max)
+        rot_f_top = f_top.rotate(center, center + cq.Vector(0, 0, 1), math.degrees(az * height))
+        profiles.append(cq.Workplane("XY").add(rot_f_top))
+        
+        # 所有截面按顺序放样
+        return profiles[0].loft(ruled=True)
     except Exception:
         return None
 
