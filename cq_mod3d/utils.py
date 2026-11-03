@@ -1,6 +1,7 @@
 import numpy as np
 import trimesh
 import cadquery as cq
+import traceback
 
 from OCP.ShapeFix import ShapeFix_Shell, ShapeFix_Solid
 from OCP.BRepCheck import BRepCheck_Analyzer
@@ -19,15 +20,20 @@ from OCP.TopLoc import TopLoc_Location
 from OCP.TopoDS import TopoDS
 
 
-def _is_vec(x, n):
-    """高性能向量检查"""
-    arr = np.asarray(x)
-    return arr.ndim == 1 and arr.size == n and np.issubdtype(arr.dtype, np.number)
+def _is_vec(x, n: int) -> bool:
+    """高性能向量检查：利用 NumPy 判断是否为指定长度的数值数组"""
+    try:
+        arr = np.asarray(x)
+        return arr.ndim == 1 and arr.size == n and np.issubdtype(arr.dtype, np.number)
+    except Exception:
+        return False
 
-def _vec(x):
+
+def _vec(x) -> tuple:
     return tuple(float(v) for v in x)
 
-def _tessellate(shape, tol=0.1):
+
+def _tessellate(shape, tol: float = 0.1):
     """Workplane/Shape/wrapped -> (verts, faces)"""
     if isinstance(shape, cq.Workplane):
         wrapped = shape.val().wrapped
@@ -59,7 +65,7 @@ def _tessellate(shape, tol=0.1):
     return np.asarray(verts), faces
 
 
-def _tri_mesh_to_wp(verts, faces, tol=0.05):
+def _tri_mesh_to_wp(verts, faces, tol: float = 0.05) -> cq.Workplane:
     sewing = BRepBuilderAPI_Sewing(tol)
     for f in faces:
         poly = BRepBuilderAPI_MakePolygon()
@@ -68,13 +74,13 @@ def _tri_mesh_to_wp(verts, faces, tol=0.05):
         poly.Close()
         try:
             sewing.Add(BRepBuilderAPI_MakeFace(poly.Wire()).Face())
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ [cq_mod3d] 缝合面失败: {e}")
             continue
     sewing.Perform()
     shell = sewing.SewedShape()
 
     def _ensure_positive_volume(shape):
-        """确保实体的体积为正，如果法线朝内则翻转"""
         cq_shape = cq.Shape.cast(shape)
         if cq_shape.Volume() < 0:
             return cq_shape.reverse()
@@ -85,8 +91,8 @@ def _tri_mesh_to_wp(verts, faces, tol=0.05):
         solid = BRepBuilderAPI_MakeSolid(TopoDS.Shell_s(shell)).Solid()
         if BRepCheck_Analyzer(solid).IsValid():
             return cq.Workplane("XY").add(_ensure_positive_volume(solid))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [cq_mod3d] 转换为 Solid 失败，尝试 ShapeFix: {e}")
 
     # --- 第二次尝试：使用 ShapeFix 强制修复缝隙 ---
     try:
@@ -101,14 +107,15 @@ def _tri_mesh_to_wp(verts, faces, tol=0.05):
         
         if BRepCheck_Analyzer(fixed_solid).IsValid():
             return cq.Workplane("XY").add(_ensure_positive_volume(fixed_solid))
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [cq_mod3d] ShapeFix 修复失败: {e}")
 
     # --- 兜底：如果强行修复也失败，退回原始形状 ---
-    print("⚠️ 警告：网格自交过于严重，无法修复为 Watertight Solid，已降级返回 Shell。")
+    print("⚠️ [cq_mod3d] 警告：网格自交过于严重，无法修复为 Watertight Solid，已降级返回 Shell。")
     return cq.Workplane("XY").add(cq.Shape.cast(shell))
 
-def extremes(part):
+
+def extremes(part: cq.Workplane) -> tuple:
     """返回 cq.Workplane 的包围盒 (minx, maxx, miny, maxy, minz, maxz)"""
     if not isinstance(part, cq.Workplane):
         raise TypeError(f"extremes expects cq.Workplane, got {type(part)}")
