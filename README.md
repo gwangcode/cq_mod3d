@@ -22,18 +22,23 @@ You can install the latest version directly from GitHub:
 
 ```bash
 pip install git+https://github.com/gwangcode/cq_mod3d.git
+```
+
 If you are developing locally, you can clone the source code and perform an editable install:
 
-bash
+```bash
 git clone https://github.com/gwangcode/cq_mod3d.git
 cd cq_mod3d
 pip install -e .
+```
+
 🚀 Quick Start
 In your CQ-Editor or any Python script, just import cq_mod3d once, and all operator patches will be automatically activated.
 
-python
+```python
 import cadquery as cq
 import cq_mod3d as m3
+```
 
 # 1. Quickly generate primitives using built-in functions
 base = m3.cube(10)
@@ -83,15 +88,17 @@ amplitude	Amplitude. The depth of displacement between the highest peaks and low
 🌀 Pure B-rep Twist
 CadQuery natively does not support twisting complex solids. cq_mod3d provides the brep_twist_z function, which generates perfect solids via a "slice-rotate-loft" method with zero watertightness issues.
 
-python
+```python
 import cq_mod3d as m3
+
 
 part = m3.cuboid(5, 5, 20)
 # Twist 180 degrees along the Z-axis (sections=50 for a smooth surface)
 twisted = m3.brep_twist_z(part, angle_deg=180, sections=50)
 
 # Or use the ^ operator directly (the system will automatically choose B-rep or mesh twist)
-twisted_op = part ^ [0, 0, 3.14] 
+twisted_op = part ^ [0, 0, 3.14]
+```
 📐 Operator Overloading Cheatsheet
 As long as you import cq_mod3d, all cq.Workplane objects gain the following capabilities:
 
