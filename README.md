@@ -80,6 +80,9 @@ show_object(scaled, name="Scaled", options={"color": (0, 1, 0)})
 # 🪨 Procedural Natural Textures (Noise)
 **cq_mod3d** provides an algorithm based on normal displacement and 3D Gaussian noise, which can transform highly regular models (like spheres, cylinders, boxes) into natural, irregular shapes.
 
+**⚠️ Precision Disclaimer**
+Internally, apply_noise works by converting precise B-rep surfaces into a triangular mesh, applying deformations, and then re-sewing it back into a solid. Consequently, the processed model will consist of numerous microscopic triangular planes, losing its perfectly smooth mathematical surface characteristics. This is perfectly fine for 3D printing, rendering, and visual presentation. However, if you need to perform high-precision mechanical fillets or subsequent boolean operations, it is highly recommended to complete these engineering steps before applying the noise.
+
 ## Basic Usage
 ```python
 import cq_mod3d as m3
