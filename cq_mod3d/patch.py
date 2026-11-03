@@ -85,3 +85,5 @@ def _patch_workplane():
     cq.Workplane.__mod__     = _wp_mod
     cq.Workplane.__xor__     = _wp_xor
     cq.Workplane._mod3d_patched = True
+
+_patch_workplane()
