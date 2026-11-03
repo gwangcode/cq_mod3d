@@ -8,9 +8,11 @@ version = "0.1.0"
 description = "A procedural geometry, transformation, and noise generator for CadQuery."
 readme = "README.md"
 requires-python = ">=3.9"
+license = { text = "MIT" }
 authors = [
-    { name = "Your Name", email = "your.email@example.com" },
+    { name = "Gang Wang", url = "https://github.com/gwangcode" }
 ]
+keywords = ["cadquery", "3d", "cad", "procedural", "noise", "mesh"]
 dependencies = [
     "cadquery>=2.3.0",
     "numpy",
@@ -19,9 +21,9 @@ dependencies = [
     "shapely"
 ]
 
-authors = [
-    { name = "Gang Wang", email = "gwangforward@gmail.com" },
-]
-# ...
 [project.urls]
 "Homepage" = "https://github.com/gwangcode/cq_mod3d"
+"Bug Tracker" = "https://github.com/gwangcode/cq_mod3d/issues"
+
+[tool.setuptools.packages.find]
+include = ["cq_mod3d*"]
