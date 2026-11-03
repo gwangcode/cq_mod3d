@@ -14,23 +14,25 @@ def brep_twist_z(part, az, sections=30):
     if height <= 0:
         return part
         
-    # 修复：使用 (xmin + xmax) / 2 替代不存在的 xcenter
     xc = (bb.xmin + bb.xmax) / 2.0
     yc = (bb.ymin + bb.ymax) / 2.0
     center = cq.Vector(xc, yc, 0)
     
     profiles = []
-    solid = part.val().clean()
+    
+    # 修复：必须包成 Workplane 才能使用 section
+    wp = cq.Workplane("XY").add(part.val().clean())
     
     for i in range(sections + 1):
         t = i / sections
         z_level = z_min + t * height
         
-        section_shape = solid.section(cq.Plane(origin=(0, 0, z_level), xDir=(1, 0, 0), normal=(0, 0, 1)))
-        if section_shape is None: 
+        # Workplane 的 section 返回一个新的 Workplane
+        section_wp = wp.section(cq.Plane(origin=(0, 0, z_level), xDir=(1, 0, 0), normal=(0, 0, 1)))
+        if section_wp is None: 
             continue
             
-        faces = section_shape.Faces()
+        faces = section_wp.faces().vals()
         if not faces: 
             continue
             
