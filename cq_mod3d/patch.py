@@ -22,8 +22,15 @@ def _wp_sub(self, other):
 def _wp_mul(self, other):
     if isinstance(other, cq.Workplane):
         return self.intersect(other)
+        
+    # 修复：Workplane 没有 scale 方法，用 GTransform 实现标量缩放
     if isinstance(other, (int, float)):
-        return self.scale(other)
+        gtrsf = gp_GTrsf()
+        gtrsf.SetVectorialPart(gp_Mat(other, 0, 0, 0, other, 0, 0, 0, other))
+        gtrsf.SetTranslationPart(gp_XYZ(0, 0, 0))
+        new_shape = BRepBuilderAPI_GTransform(self.val().wrapped, gtrsf, True).Shape()
+        return cq.Workplane("XY").add(cq.Shape.cast(new_shape))
+        
     if _is_vec(other, 3):
         ax, ay, az = _vec(other)
         gtrsf = gp_GTrsf()
