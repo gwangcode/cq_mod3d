@@ -14,7 +14,11 @@ def brep_twist_z(part, az, sections=30):
     if height <= 0:
         return part
         
-    center = cq.Vector(bb.xcenter, bb.ycenter, 0)
+    # 修复：使用 (xmin + xmax) / 2 替代不存在的 xcenter
+    xc = (bb.xmin + bb.xmax) / 2.0
+    yc = (bb.ymin + bb.ymax) / 2.0
+    center = cq.Vector(xc, yc, 0)
+    
     profiles = []
     solid = part.val().clean()
     
@@ -46,7 +50,6 @@ def brep_twist_z(part, az, sections=30):
 
 
 def apply_noise(part, density=0.2, smoothness=2.0, amplitude=0.1):
-    """为规则的 B-rep 模型生成自然的不规则纹理（凸凹）。"""
     if not isinstance(part, cq.Workplane):
         raise TypeError("输入必须是 cq.Workplane 对象")
 
@@ -81,7 +84,6 @@ def apply_noise(part, density=0.2, smoothness=2.0, amplitude=0.1):
 
 
 def apply_noise_wire(part, density=0.2, smoothness=2.0, amplitude=0.1):
-    """为线框或曲线（如树枝骨架、路径）生成不规则的抖动。"""
     verts, _ = _tessellate(part)
     if len(verts) == 0:
         return part
