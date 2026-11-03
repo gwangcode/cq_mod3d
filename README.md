@@ -66,7 +66,9 @@ rotated = base @ [0, 0, 1.57]
 ```
 
 ## Shear: % [sxy, sxz, syx, syz, szx, szy]
+```python
 sheared = base % [0.5, 0, 0, 0, 0, 0]
+```
 
 ## Display
 ```python
