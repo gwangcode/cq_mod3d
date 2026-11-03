@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cq_mod3d"
+version = "0.1.0"
+description = "A procedural geometry, transformation, and noise generator for CadQuery."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Your Name", email = "your.email@example.com" },
+]
+dependencies = [
+    "cadquery>=2.3.0",
+    "numpy",
+    "scipy",
+    "trimesh",
+    "shapely"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/cq_mod3d"
