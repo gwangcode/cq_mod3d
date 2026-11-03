@@ -33,7 +33,7 @@ pip install -e .
 ```
 
 🚀 Quick Start
-In your CQ-Editor or any Python script, just import cq_mod3d once, and all operator patches will be automatically activated.
+In your CQ-Editor or any Python script, just import **cq_mod3d** once, and all operator patches will be automatically activated.
 
 ```python
 import cq_mod3d as m3
@@ -77,7 +77,7 @@ show_object(scaled, name="Scaled", options={"color": (0, 1, 0)})
 ```
 
 # 🪨 Procedural Natural Textures (Noise)
-cq_mod3d provides an algorithm based on normal displacement and 3D Gaussian noise, which can transform highly regular models (like spheres, cylinders, boxes) into natural, irregular shapes.
+**cq_mod3d** provides an algorithm based on normal displacement and 3D Gaussian noise, which can transform highly regular models (like spheres, cylinders, boxes) into natural, irregular shapes.
 
 ## Basic Usage
 ```python
@@ -104,10 +104,10 @@ show_object(rough_rock, name="Rock")
 | **smoothness** | **Smoothness.** Larger values yield smoother surfaces; smaller values yield sharper, more rugged surfaces. | `1.0 ~ 2.0` | `3.0 ~ 5.0` |
 | **amplitude** | **Amplitude.** The depth of displacement between the highest peaks and lowest valleys. | `0.1 ~ 0.3` | `0.2 ~ 0.5` |
 
-⚠️ Note: To ensure the final model is watertight, cq_mod3d internally uses the ShapeFix tool to forcibly repair seams. If the noise amplitude is too large and causes severe mesh self-intersections, it will fall back to a Shell and print a warning. For 3D printing, it is recommended to keep amplitude under 20% of the model's minimum dimension.
+⚠️ Note: To ensure the final model is watertight, **cq_mod3d** internally uses the ShapeFix tool to forcibly repair seams. If the noise amplitude is too large and causes severe mesh self-intersections, it will fall back to a Shell and print a warning. For 3D printing, it is recommended to keep amplitude under 20% of the model's minimum dimension.
 
 # 🌀 Pure B-rep Twist
-CadQuery natively does not support twisting complex solids. cq_mod3d provides the brep_twist_z function, which generates perfect solids via a "slice-rotate-loft" method with zero watertightness issues.
+CadQuery natively does not support twisting complex solids. **cq_mod3d** provides the brep_twist_z function, which generates perfect solids via a "slice-rotate-loft" method with zero watertightness issues.
 
 ```python
 import cq_mod3d as m3
@@ -121,7 +121,7 @@ twisted = m3.brep_twist_z(part, angle_deg=180, sections=50)
 twisted_op = part ^ [0, 0, 3.14]
 ```
 # 📐 Operator Overloading Cheatsheet
-As long as you import cq_mod3d, all cq.Workplane objects gain the following capabilities:
+As long as you `import cq_mod3d`, all `cq.Workplane` objects gain the following capabilities:
 
 
 | Operator | Operand | Equivalent Action | Example |
